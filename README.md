@@ -12,7 +12,7 @@ Analyze smart device usage data to discover trends in user behavior and provide 
 Tools Used
 SQL (BigQuery)
 Tableau (Data Visualization)
-Google Sheets (Data storage)
+Google Drive (Data storage)
 Dataset
 
 Fitbit Fitness Tracker Data (Kaggle)
