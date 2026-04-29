@@ -1,1 +1,3 @@
-
+--Aggregate data by day
+--Merge activity, sleep and weight tables
+--Create final analytical dataset
