@@ -1,1 +1,4 @@
-
+--Calculate KPIs
+--User segmentation
+--Correlation analysis
+--Weekday vs weekend analysis
