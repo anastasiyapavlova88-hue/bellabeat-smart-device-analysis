@@ -47,28 +47,19 @@ FROM daily_activity_clean
 WHERE total_steps >= 0
 AND calories >= 0;
 
---create sleep table
-CREATE OR REPLACE TABLE sleep_day_clean AS
+--create sleep table, correct timestamp
+CREATE OR REPLACE TABLE `maximal-plate-492011-g5.fitbit_031226_041226.sleep_day_clean` AS
 SELECT
   CAST(Id AS INT64) AS user_id,
-  PARSE_TIMESTAMP('%m/%d/%Y %I:%M:%S %p', SleepDay) AS sleep_datetime,
+  DATE(PARSE_TIMESTAMP('%m/%d/%Y %I:%M:%S %p', SleepDay)) AS sleep_date,
   CAST(TotalSleepRecords AS INT64) AS sleep_records,
   CAST(TotalMinutesAsleep AS INT64) AS minutes_asleep,
   CAST(TotalTimeInBed AS INT64) AS time_in_bed
-FROM raw_sleep_day;
-
---correct the timestamp
-CREATE OR REPLACE TABLE sleep_day_clean AS
-SELECT
-  user_id,
-  DATE(sleep_datetime) AS sleep_date,
-  minutes_asleep,
-  time_in_bed
-FROM sleep_day_clean;
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.sleepDay`;
 
 --check sleep duplicates
-SELECT user_id, sleep_date, COUNT(*)
-FROM sleep_day_clean
+SELECT user_id, sleep_date, COUNT(*) AS duplicates
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.sleep_day_clean`
 GROUP BY user_id, sleep_date
 HAVING COUNT(*) > 1;
 
@@ -77,14 +68,30 @@ SELECT DISTINCT *
 FROM sleep_day_clean;
 
 --clean weight table
-CREATE OR REPLACE TABLE weight_log_clean AS
+CREATE OR REPLACE TABLE `maximal-plate-492011-g5.fitbit_031226_041226.weight_log_clean` AS
 SELECT
   CAST(Id AS INT64) AS user_id,
-  PARSE_TIMESTAMP('%m/%d/%Y %I:%M:%S %p', Date) AS weight_datetime,
+  DATE(PARSE_TIMESTAMP('%m/%d/%Y %I:%M:%S %p', Date)) AS weight_date,
   CAST(WeightKg AS FLOAT64) AS weight_kg,
   CAST(BMI AS FLOAT64) AS bmi
-FROM raw_weight_log
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.raw_weightInfo`
 WHERE WeightKg IS NOT NULL;
+
+--check duplicates
+SELECT user_id, weight_date, COUNT(*) AS duplicates
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.weight_log_clean`
+GROUP BY user_id, weight_date
+HAVING COUNT(*) > 1;
+
+--aggregate if there are duplicates
+CREATE OR REPLACE TABLE `maximal-plate-492011-g5.fitbit_031226_041226.weight_log_clean` AS
+SELECT
+  user_id,
+  weight_date,
+  MAX(weight_kg) AS weight_kg,
+  MAX(bmi) AS bmi
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.weight_log_clean`
+GROUP BY user_id, weight_date;
 
 --add date
 CREATE OR REPLACE TABLE weight_log_clean AS
@@ -96,13 +103,26 @@ SELECT
 FROM weight_log_clean;
 
 --check final tables
-SELECT COUNT(DISTINCT user_id) FROM daily_activity_clean;
-SELECT COUNT(DISTINCT user_id) FROM sleep_day_clean;
-SELECT COUNT(DISTINCT user_id) FROM weight_log_clean;
+SELECT COUNT(DISTINCT user_id) FROM `maximal-plate-492011-g5.fitbit_031226_041226.daily_activity_clean`;
+SELECT COUNT(DISTINCT user_id) FROM `maximal-plate-492011-g5.fitbit_031226_041226.sleep_day_clean`;
+SELECT COUNT(DISTINCT user_id) FROM `maximal-plate-492011-g5.fitbit_031226_041226.weight_log_clean`;
 
-SELECT COUNT(*) FROM daily_activity_clean;
-SELECT COUNT(*) FROM sleep_day_clean;
-SELECT COUNT(*) FROM weight_log_clean;
+SELECT COUNT(*) FROM `maximal-plate-492011-g5.fitbit_031226_041226.daily_activity_clean`;
+SELECT COUNT(*) FROM `maximal-plate-492011-g5.fitbit_031226_041226.sleep_day_clean`;
+SELECT COUNT(*) FROM `maximal-plate-492011-g5.fitbit_031226_041226.weight_log_clean`;
+
+--check users without sleep data
+SELECT DISTINCT a.user_id
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.daily_activity_clean` a
+LEFT JOIN `maximal-plate-492011-g5.fitbit_031226_041226.sleep_clean` s
+ON a.user_id = s.user_id
+WHERE s.user_id IS NULL;
+
+SELECT COUNT(DISTINCT a.user_id) AS users_without_sleep
+FROM `maximal-plate-492011-g5.fitbit_031226_041226.daily_activity_clean` a
+LEFT JOIN `maximal-plate-492011-g5.fitbit_031226_041226.sleep_clean` s
+ON a.user_id = s.user_id
+WHERE s.user_id IS NULL;
 
 CREATE OR REPLACE TABLE `maximal-plate-492011-g5.fitbit_031226_041226.daily_activity_clean` AS
 SELECT DISTINCT *
